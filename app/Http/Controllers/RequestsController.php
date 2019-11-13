@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 
 class RequestsController extends Controller
 {
@@ -30,8 +31,10 @@ class RequestsController extends Controller
      */
     public function create()
     {
-        //
+        return view('create');
+            
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -41,7 +44,26 @@ class RequestsController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $this->validate($request, [
+            'text' => 'required',
+            'body' => 'required'
+        ]);
+
+        $client = new Client();
+
+        try{
+        $response = $client->post('http://itemapi.local.com/api/items?text='.$request->input('text').'&body='.$request->input('body'));
+        } 
+        catch(RequestException $e) {
+            if ($e->hasResponse()){
+                $msg = $e->getResponse();
+            } else {
+                $msg = 'The item could not be inserted.';
+            }
+            return redirect()->to('/')->with('error', $msg);
+        }
+
+        return redirect()->to('/')->with('success', 'Item inserted successfully !');
     }
 
     /**
@@ -63,7 +85,13 @@ class RequestsController extends Controller
      */
     public function edit($id)
     {
-        //
+        $client = new Client();
+
+        $response = $client->get('http://itemapi.local.com/api/items/'.$id);
+
+        $item = json_decode($response->getBody()->getContents());
+
+        return view('edit')->with('item', $item);
     }
 
     /**
@@ -75,7 +103,26 @@ class RequestsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $this->validate($request, [
+            'text' => 'required',
+            'body' => 'required'
+        ]);
+
+        $client = new Client();
+
+        try{
+        $response = $client->post('http://itemapi.local.com/api/items/'.$id.'?text='.$request->input('text').'&body='.$request->input('body').'&_method=PUT');
+        } 
+        catch(RequestException $e) {
+            if ($e->hasResponse()){
+                $msg = $e->getResponse();
+            } else {
+                $msg = 'The item could not be updated.';
+            }
+            return redirect()->to('/')->with('error', $msg);
+        }
+
+        return redirect()->to('/')->with('success', 'Item updated successfully !');
     }
 
     /**
@@ -86,6 +133,20 @@ class RequestsController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $client = new Client();
+
+        $response = $client->post('http://itemapi.local.com/api/items/'.$id.'?_method=DELETE');
+
+        $contents = json_decode($response->getBody()->getContents());
+
+        $success = $contents->success;
+
+        if ($success){
+
+            return redirect()->to('/')->with('success', 'Item deleted successfully !');
+        }
+        else {
+            return redirect()->to('/')->with('error', 'Item could not be deleted');
+        }
     }
 }
